@@ -1,37 +1,34 @@
 const multer = require("multer");
-import { cloudinaryConfig } from "./cloudinaryConfig";
+const cloudinary = require("./cloudinaryConfig");
+const { Readable } = require("stream");
 
-// Multer configuration to store file in memory
+// Use memory storage to avoid storing files on disk
 const storage = multer.memoryStorage();
-export const upload = multer({ storage });
 
-const cloudinary = cloudinaryConfig;
+const upload = multer({ storage: storage });
 
-// Middleware to handle Cloudinary upload
-export const uploadToCloudinary = async (req, res, next) => {
+export default upload;
+
+// Upload image to Cloudinary
+export const uploadToCloudinary = (req, res, next) => {
   if (!req.file) {
-    return res.status(400).json({ message: "No image file provided" });
+    return res.status(400).json({ message: "No file uploaded" });
   }
 
-  try {
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: "ImageGram", // Specify folder name here
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
+  const uploadStream = cloudinary.uploader.upload_stream(
+    { resource_type: "auto" },  // Let Cloudinary automatically detect file type
+    (error, result) => {
+      if (error) {
+        return res.status(500).json({ success: false, message: "Error uploading to Cloudinary", error });
+      }
 
-      uploadStream.end(req.file.buffer); // Pass file buffer to Cloudinary upload stream
-    });
+      // Add Cloudinary image URL to the request object for further use
+      req.file.location = result.secure_url;
+      next();
+    }
+  );
 
-    req.imageUrl = result.secure_url; // Set the Cloudinary URL on req for further use
-    next();
-  } catch (error) {
-    console.error("Error uploading image to Cloudinary:", error);
-    res.status(500).json({ message: "Cloudinary upload failed" });
-  }
+  // Convert buffer into a readable stream
+  const stream = Readable.from(req.file.buffer);
+  stream.pipe(uploadStream);
 };
