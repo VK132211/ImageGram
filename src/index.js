@@ -3,8 +3,6 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import {options} from './utils/swaggerOptions.js';
 const { default: connectDB } = require("./config/dbConfig");
-import { createPost } from "../src/controllers/postController";
-import upload, { uploadToCloudinary } from "../src/config/multerConfig";
 import apiRouter from "./routers/apiRouter.js";
 const app = express();
 const PORT = 3000;

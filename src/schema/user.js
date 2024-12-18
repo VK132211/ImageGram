@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import bcrypt from "bcrypt";
 const userSchema = new mongoose.Schema(
   {
     username: {
@@ -15,12 +15,15 @@ const userSchema = new mongoose.Schema(
       minLength: 6,
       validate: {
         validator: function (emailValue) {
-          return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(
-            emailValue
-          );
+          return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(emailValue);
         },
         message: "Invalid email format",
       },
+    },
+    role: {
+      type: String,
+      default: "user",
+      enum: ["user", "admin"],
     },
     password: {
       type: String,
@@ -30,6 +33,14 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.pre("save", function modifyPassword(next) {
+  const user = this;
+  const SALT = bcrypt.genSaltSync(9);
+  const hashedPassword = bcrypt.hashSync(user.password, SALT);
+  user.password = hashedPassword;
+  next();
+});
 
 const user = mongoose.model("User", userSchema);
 
